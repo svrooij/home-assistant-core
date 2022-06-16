@@ -16,7 +16,6 @@ from homeassistant.components.media_player import (  # DEVICE_CLASSES_SCHEMA,
 )
 from homeassistant.components.media_player.browse_media import BrowseMedia
 from homeassistant.components.media_player.const import (  # MEDIA_TYPE_MUSIC,; REPEAT_MODE_ONE,
-    ATTR_MEDIA_ENQUEUE,
     MEDIA_CLASS_APP,
     MEDIA_CLASS_DIRECTORY,
     MEDIA_TYPE_TRACK,
@@ -335,12 +334,21 @@ class MqttMediaPlayer(MqttEntity, MediaPlayerEntity, RestoreEntity):
             )
         raise BrowseError(f"Media not found: {media_content_type} / {media_content_id}")
 
-    async def async_play_media(self, media_type: str, media_id: str, **kwargs):
+    async def async_play_media(
+        self,
+        media_type: str,
+        media_id: str,
+        enqueue: MediaPlayerEnqueue | None = None,
+        announce: bool | None = None,
+        **kwargs,
+    ):
         """Play some media file."""
         # Use 'replace' as the default enqueue option
-        enqueue = kwargs.get(ATTR_MEDIA_ENQUEUE, MediaPlayerEnqueue.ADD)
         _LOGGER.debug(
-            'MQTT Media Player play media: "%s" enqueue: "%s"', media_id, enqueue
+            'MQTT Media Player play media: "%s" enqueue: "%s" announce: "%s"',
+            media_id,
+            enqueue,
+            announce,
         )
         if media_id == "sm://notification/ding":
             await self.send_command(
@@ -356,7 +364,7 @@ class MqttMediaPlayer(MqttEntity, MediaPlayerEntity, RestoreEntity):
                 self.hass, media_id, self.entity_id
             )
 
-            if media_id.startswith("media-source://tts/"):
+            if media_id.startswith("media-source://tts/") or announce is True:
                 await self.send_command("notify", {"trackUri": info.url, "timeout": 10})
                 return
 
@@ -370,6 +378,7 @@ class MqttMediaPlayer(MqttEntity, MediaPlayerEntity, RestoreEntity):
         if media_id.startswith("spotify:"):
             await self.send_command("queue", info.url)
             return
+
         _LOGGER.error(
             'MQTT media player does not support a media type of "%s"', media_type
         )
