@@ -731,6 +731,8 @@ build.json @home-assistant/supervisor
 /tests/components/motioneye/ @dermotduffy
 /homeassistant/components/mqtt/ @emontnemery @jbouwh
 /tests/components/mqtt/ @emontnemery @jbouwh
+/homeassistant/components/mqtt_sonos/ @svrooij
+/tests/components/mqtt_sonos/ @svrooij
 /homeassistant/components/msteams/ @peroyvind
 /homeassistant/components/mullvad/ @meichthys
 /tests/components/mullvad/ @meichthys

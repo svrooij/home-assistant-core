@@ -261,6 +261,7 @@ FLOWS = {
         "motion_blinds",
         "motioneye",
         "mqtt",
+        "mqtt_sonos",
         "mullvad",
         "mutesync",
         "myq",

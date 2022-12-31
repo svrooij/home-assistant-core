@@ -7,6 +7,9 @@ MQTT = {
     "dsmr_reader": [
         "dsmr/#",
     ],
+    "mqtt_sonos": [
+        "sonos2mqtt/discovery/#",
+    ],
     "tasmota": [
         "tasmota/discovery/#",
     ],
