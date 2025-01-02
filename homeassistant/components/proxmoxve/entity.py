@@ -1,8 +1,14 @@
 """Proxmox parent entity class."""
 
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .coordinator import ProxmoxDataUpdateCoordinator
+from .const import DOMAIN
+from .coordinator import (
+    ProxmoxContainerData,
+    ProxmoxDataUpdateCoordinator,
+    ProxmoxVmData,
+)
 
 
 class ProxmoxEntity(CoordinatorEntity):
@@ -16,6 +22,8 @@ class ProxmoxEntity(CoordinatorEntity):
         icon: str,
         host_name: str,
         node_name: str,
+        qemu: bool,
+        vm_id: int,
     ) -> None:
         """Initialize the Proxmox entity."""
         super().__init__(coordinator)
@@ -25,12 +33,40 @@ class ProxmoxEntity(CoordinatorEntity):
         self._attr_name = name
         self._host_name = host_name
         self._attr_icon = icon
-        self._available = True
         self._node_name = node_name
+        self._qemu = qemu
+        self._vm_id = vm_id
 
         self._state = None
 
     @property
     def available(self) -> bool:
         """Return True if entity is available."""
-        return self.coordinator.last_update_success and self._available
+        return (
+            self.coordinator.last_update_success
+            and self.get_coordinator_data() is not None
+        )
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return the device information."""
+        t = "lxc" if not self._qemu else "vm"
+        data = self.get_coordinator_data()
+        name = data.name if data else self._vm_id
+        return DeviceInfo(
+            # connections={(f"{self._host_name}", self._vm_id)},
+            identifiers={
+                (DOMAIN, f"{self._host_name}_{self._node_name}_{self._vm_id}"),
+                # maybe add mac address?
+            },
+            manufacturer="Proxmox",
+            name=f"{self._node_name} {t} {name}",
+            model="Virtual Environment",
+            sw_version=self.coordinator.version,
+        )
+
+    def get_coordinator_data(self) -> ProxmoxContainerData | ProxmoxVmData | None:
+        """Return the data for the entity."""
+        if self._qemu:
+            return self.coordinator.data.nodes[self._node_name].vms[self._vm_id]
+        return self.coordinator.data.nodes[self._node_name].containers[self._vm_id]

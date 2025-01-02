@@ -1,20 +1,13 @@
 {
   "domain": "proxmoxve",
   "name": "Proxmox VE",
-  "codeowners": [
-    "@jhollowe",
-    "@Corbeno",
-    "@svrooij"
-  ],
+  "codeowners": ["@jhollowe", "@Corbeno", "@svrooij"],
   "config_flow": true,
   "documentation": "https://www.home-assistant.io/integrations/proxmoxve",
   "iot_class": "local_polling",
-  "loggers": [
-    "proxmoxer"
-  ],
+  "loggers": ["proxmoxer"],
   "quality_scale": "bronze",
   "requirements": [
-    "proxmoxer==2.2.0",
-    "pyproxmox-ve @ git+https://github.com/svrooij/pyproxmox-ve@main"
+    "pyproxmox-ve@git+https://github.com/svrooij/pyproxmox-ve@feature/vms"
   ]
 }

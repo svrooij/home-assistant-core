@@ -1,11 +1,13 @@
 """Configuration stuff for Proxmox VE."""
 
+from collections.abc import Mapping
+from typing import Any
+
 import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.const import (
     CONF_HOST,
-    CONF_PASSWORD,
     CONF_PORT,
     CONF_TOKEN,
     CONF_USERNAME,
@@ -56,22 +58,24 @@ class ProxmoxConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
     MINOR_VERSION = 0
 
-    # def __init__(self):
-    #     """Initialize the config flow."""
-    #     self.data = {}
+    _data: Mapping[str, Any] | None
 
-    async def async_step_user(self, user_input=None):
+    async def async_step_user(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
         """Handle a flow start."""
         errors: dict[str, str] = {}
         if user_input is not None:
-            self.data = user_input
-            self.data[CONF_NODES] = []
+            self._data = user_input
+            self._data[CONF_NODES] = []
             return await self.async_step_node()
         return self.async_show_form(
             step_id="user", data_schema=SCHEMA_HOST, errors=errors
         )
 
-    async def async_step_node(self, user_input=None):
+    async def async_step_node(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
         """Handle adding a node."""
         errors: dict[str, str] = {}
         if user_input is not None:
@@ -79,7 +83,7 @@ class ProxmoxConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if not user_input[CONF_VMS] and not user_input[CONF_CONTAINERS]:
                 errors["base"] = "no_vms_or_containers"
             else:
-                self.data[CONF_NODES].append(
+                self._data[CONF_NODES].append(
                     {
                         CONF_NODE: user_input[CONF_NODE],
                         CONF_VMS: [
@@ -92,12 +96,12 @@ class ProxmoxConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     }
                 )
 
-            if not errors:
+            if not errors and self._data:
                 if user_input[CONF_ADDITIONAL_NODE]:
                     return await self.async_step_node()
                 return self.async_create_entry(
-                    title=f"{self.data[CONF_HOST]}:{self.data[CONF_PORT]}",
-                    data=self.data,
+                    title=f"{self._data[CONF_HOST]}:{self._data[CONF_PORT]}",
+                    data=self._data,
                 )
 
         return self.async_show_form(

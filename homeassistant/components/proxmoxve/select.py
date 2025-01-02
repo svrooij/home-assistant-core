@@ -2,16 +2,13 @@
 
 from __future__ import annotations
 
-from homeassistant.components.binary_sensor import (
-    BinarySensorDeviceClass,
-    BinarySensorEntity,
-)
+from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import _LOGGER
+from .const import _LOGGER, COMMAND_NONE, COMMANDS_CONTAINER, COMMANDS_VM
 from .coordinator import ProxmoxDataUpdateCoordinator
 from .entity import ProxmoxEntity
 
@@ -22,59 +19,47 @@ async def async_setup_entry(
     """Set up the Proxmox VE component."""
     _LOGGER.debug("setup %s with config:%s", entry.title, entry.data)
     # await entry.coordinator.async_config_entry_first_refresh()
-    binary_sensors = []
+    select_entities = []
     coordinator: ProxmoxDataUpdateCoordinator = entry.coordinator
     for node_name, data in coordinator.data.nodes.items():
         _LOGGER.debug("node_name: %s data: %s", node_name, data)
-        for vm_id in data.vms:
-            binary_sensors.append(
-                ProxmoxVmBinarySensor(
-                    coordinator=coordinator,
-                    unique_id=f"proxmox_{node_name}_vm_{vm_id}_running",
-                    name="Running",
-                    icon="mdi:server",
-                    host_name=entry.title,
-                    node_name=node_name,
-                    vm_id=vm_id,
-                    qemu=True,
-                    agent=False,
-                )
-            )
-            binary_sensors.append(
-                ProxmoxVmBinarySensor(
-                    coordinator=coordinator,
-                    unique_id=f"proxmox_{node_name}_vm_{vm_id}_agent",
-                    name="Agent running",
-                    icon="mdi:access-point-check",
-                    host_name=entry.title,
-                    node_name=node_name,
-                    vm_id=vm_id,
-                    qemu=True,
-                    agent=True,
-                )
-            )
 
-        binary_sensors.extend(
+        select_entities.extend(
             [
-                ProxmoxVmBinarySensor(
+                ProxmoxSelectEntity(
                     coordinator=coordinator,
-                    unique_id=f"proxmox_{node_name}_lxc_{vm_id}_running",
-                    name="Running",
-                    icon="mdi:server",
+                    unique_id=f"proxmox_{node_name}_vm_{vm_id}_action",
+                    name="Action",
+                    icon="mdi:play",
+                    host_name=entry.title,
+                    node_name=node_name,
+                    vm_id=vm_id,
+                    qemu=True,
+                )
+                for vm_id in data.vms
+            ]
+        )
+
+        select_entities.extend(
+            [
+                ProxmoxSelectEntity(
+                    coordinator=coordinator,
+                    unique_id=f"proxmox_{node_name}_lxc_{vm_id}_action",
+                    name="Action",
+                    icon="mdi:play",
                     host_name=entry.title,
                     node_name=node_name,
                     vm_id=vm_id,
                     qemu=False,
-                    agent=False,
                 )
                 for vm_id in data.containers
             ]
         )
 
-    async_add_entries(binary_sensors)
+    async_add_entries(select_entities)
 
 
-class ProxmoxVmBinarySensor(ProxmoxEntity, BinarySensorEntity):
+class ProxmoxSelectEntity(ProxmoxEntity, SelectEntity):
     """A binary sensor for reading Proxmox VE data.
 
     Args:
@@ -85,12 +70,11 @@ class ProxmoxVmBinarySensor(ProxmoxEntity, BinarySensorEntity):
         host_name (str): The host name.
         node_name (str): The node name.
         vm_id (int): The vm id.
-        qemu (bool): The vm is a qemu vm.
-        agent (bool): Sensor is for agent.
+        qemu (bool): True if the vm is a qemu vm.
 
     """
 
-    _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
+    # _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
     _attr_has_entity_name = True
 
     def __init__(
@@ -103,30 +87,46 @@ class ProxmoxVmBinarySensor(ProxmoxEntity, BinarySensorEntity):
         node_name: str,
         vm_id: int,
         qemu: bool,
-        agent: bool,
     ) -> None:
         """Create the binary sensor for vms."""
-        self._agent = agent
+
+        self._node_name = node_name
+        self._vm_id = vm_id
+        self._qemu = qemu
         super().__init__(
             coordinator, unique_id, name, icon, host_name, node_name, qemu, vm_id
         )
 
-    @property
-    def is_on(self) -> bool | None:
-        """Return the state of the binary sensor."""
-        if (data := self.get_coordinator_data()) is None:
-            return None
-        if self._agent:
-            return data.agent_running
-        return data.running
+    async def async_select_option(self, option: str) -> None:
+        """Change the selected option."""
+
+        _LOGGER.debug("Select option %s", option)
+        # Do something with the option (like sending it to proxmox)
+        if not self._qemu and option in COMMANDS_CONTAINER:
+            await self.coordinator.async_send_lxc_command(
+                self._node_name, self._vm_id, option
+            )
+        elif self._qemu and option in COMMANDS_VM:
+            await self.coordinator.async_send_qemu_command(
+                self._node_name, self._vm_id, option
+            )
+        # Note sure how to reset back to COMMAND_NONE after sending the command
+        self._attr_current_option = COMMAND_NONE
 
     @property
-    def available(self) -> bool:
-        """Return sensor availability."""
+    def current_option(self) -> str | None:
+        """Return the current selected option."""
 
-        return super().available and self.get_coordinator_data() is not None
+        return COMMAND_NONE
 
     @property
-    def entity_category(self) -> EntityCategory | None:
+    def options(self) -> list[str]:
+        """Return a set of selectable options."""
+        if not self._qemu:
+            return [COMMAND_NONE, *COMMANDS_CONTAINER]
+        return [COMMAND_NONE, *COMMANDS_VM]
+
+    @property
+    def entity_category(self) -> EntityCategory:
         """Return the entity category."""
-        return EntityCategory.DIAGNOSTIC if self._agent else None
+        return EntityCategory.DIAGNOSTIC
