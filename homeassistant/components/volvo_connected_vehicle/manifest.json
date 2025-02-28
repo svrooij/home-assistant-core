@@ -1,0 +1,20 @@
+{
+  "domain": "volvo_connected_vehicle",
+  "name": "Volvo Connected Vehicle",
+  "codeowners": [
+    "@svrooij"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "application_credentials"
+  ],
+  "documentation": "https://www.home-assistant.io/integrations/volvo_connected_vehicle",
+  "homekit": {},
+  "iot_class": "cloud_polling",
+  "quality_scale": "bronze",
+  "requirements": [
+    "volvo-connected==0.2.0"
+  ],
+  "ssdp": [],
+  "zeroconf": []
+}

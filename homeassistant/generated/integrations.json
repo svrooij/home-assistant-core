@@ -6936,6 +6936,12 @@
       "config_flow": true,
       "iot_class": "local_polling"
     },
+    "volvo_connected_vehicle": {
+      "name": "Volvo Connected Vehicle",
+      "integration_type": "hub",
+      "config_flow": true,
+      "iot_class": "cloud_polling"
+    },
     "volvooncall": {
       "name": "Volvo On Call",
       "integration_type": "hub",
