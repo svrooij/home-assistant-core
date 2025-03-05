@@ -1,10 +1,5 @@
 """Application credentials platform for the Volvo Connected Vehicle integration."""
 
-import base64
-import hashlib
-import os
-import re
-
 from homeassistant.components.application_credentials import (
     AuthorizationServer,
     ClientCredential,
@@ -13,6 +8,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_entry_oauth2_flow
 
 from .const import DOMAIN, OAUTH2_AUTHORIZE, OAUTH2_TOKEN
+from .local_oauth_with_pkce import LocalOAuthWithPkce
 
 # Scopes required by the integration
 # openid is required by the OAuth2 flow
@@ -33,7 +29,7 @@ async def async_get_auth_implementation(
     hass: HomeAssistant, auth_domain: str, credential: ClientCredential
 ) -> config_entry_oauth2_flow.AbstractOAuth2Implementation:
     """Return auth implementation."""
-    return OAuth2WithPKCEImplementation(
+    return VolvoAuthImplementation(
         hass,
         DOMAIN,
         credential,
@@ -44,27 +40,10 @@ async def async_get_auth_implementation(
     )
 
 
-def _generateCodeChallengePair() -> tuple:
-    # code_verifier = secrets.token_urlsafe(128).decode('utf-8')
-    code_verifier = base64.urlsafe_b64encode(os.urandom(128)).decode("utf-8")
-    code_verifier = re.sub("[^a-zA-Z0-9]+", "", code_verifier)
-    code_verifier = code_verifier[
-        :100
-    ]  # 'code_verifier must be between 43 and 128 characters.'
-
-    code_challenge = base64.urlsafe_b64encode(
-        hashlib.sha256(code_verifier.encode("utf-8")).digest()
-    ).decode("utf-8")
-    code_challenge = code_challenge.replace("=", "")
-
-    return (code_verifier, code_challenge)
-
-
-class OAuth2WithPKCEImplementation(config_entry_oauth2_flow.LocalOAuth2Implementation):
+class VolvoAuthImplementation(LocalOAuthWithPkce):
     """Application Credentials local oauth2 with PKCE implementation."""
 
     code_verifier: str
-    code_challenge: str
 
     def __init__(
         self,
@@ -84,7 +63,7 @@ class OAuth2WithPKCEImplementation(config_entry_oauth2_flow.LocalOAuth2Implement
         )
         self._name = credential.name
         # Init PKCE
-        self.code_verifier, self.code_challenge = _generateCodeChallengePair()
+        self.code_verifier = LocalOAuthWithPkce.generate_code_verifier()
 
     @property
     def extra_authorize_data(self) -> dict:
@@ -92,7 +71,9 @@ class OAuth2WithPKCEImplementation(config_entry_oauth2_flow.LocalOAuth2Implement
         return {
             "scope": " ".join(SCOPES),
             "code_challenge_method": "S256",
-            "code_challenge": self.code_challenge,  # PKCE
+            "code_challenge": LocalOAuthWithPkce.compute_code_challenge(
+                self.code_verifier
+            ),  # PKCE
         }
 
     @property
