@@ -171,11 +171,7 @@ class LocalOAuth2Implementation(AbstractOAuth2Implementation):
                     "client_id": self.client_id,
                     "redirect_uri": redirect_uri,
                     "state": _encode_jwt(
-                        self.hass,
-                        {
-                            "flow_id": flow_id,
-                            "redirect_uri": redirect_uri,
-                        },
+                        self.hass, {"flow_id": flow_id, "redirect_uri": redirect_uri}
                     ),
                 }
             )
