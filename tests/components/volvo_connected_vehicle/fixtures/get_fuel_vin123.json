@@ -1,0 +1,14 @@
+{
+  "data": {
+    "fuelAmount": {
+      "value": "47.3",
+      "unit": "l",
+      "timestamp": "2025-03-06T13:54:00.123Z"
+    },
+    "batteryChargeLevel": {
+      "value": "87.3",
+      "unit": "%",
+      "timestamp": "2025-03-06T13:54:00.123Z"
+    }
+  }
+}

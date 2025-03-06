@@ -1,0 +1,19 @@
+{
+  "data": {
+    "vin": "VIN123",
+    "modelYear": 2019,
+    "gearbox": "AUTOMATIC",
+    "fuelType": "DIESEL",
+    "externalColour": "SAVILE GREY",
+    "batteryCapacityKWH": 78.0,
+    "images": {
+      "exteriorImageUrl": "https://cas.volvocars.com/image/vbsnext-v4/exterior/MY19_1817/225/A8/13/49200/R131/_/TP02/_/_/TM02/JT02_f13/SR02/_/_/JB0C/T206/default.png?market=us&client=connected-vehicle-api&w=1920&bg=00000000&angle=0&fallback",
+      "interiorImageUrl": "https://cas.volvocars.com/image/vbsnext-v4/interior/MY19_1817/225/1/RC0000_f13/NC04/DI02/RU06/_/_/FJ01/EV02/K502/default.png?market=us&client=connected-vehicle-api&w=1920&bg=00000000&angle=0&fallback"
+    },
+    "descriptions": {
+      "model": "V60 II",
+      "upholstery": "CHARCOAL",
+      "steering": "LEFT"
+    }
+  }
+}

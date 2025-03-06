@@ -17,6 +17,7 @@ from volvo_connected.vcclient.models.vehicle_details_data import VehicleDetails_
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_entry_oauth2_flow
+import homeassistant.helpers.httpx_client as client_factory
 from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
     UpdateFailed,
@@ -83,7 +84,8 @@ class VolvoCoordinator(DataUpdateCoordinator[dict[str, VolvoUpdate]]):
                 VolvoAuthenticationProvider(
                     "294137f4b70b460b999794ec5d1180fa",  # TODO: Get this from somewhere, instead of hardcoding it (VCC key tied to application credentials)
                     VolvoHaAccessTokenProvider(session),
-                )
+                ),
+                http_client=client_factory.get_async_client(hass),
             )
         )
         super().__init__(
@@ -101,17 +103,23 @@ class VolvoCoordinator(DataUpdateCoordinator[dict[str, VolvoUpdate]]):
             # Do we want this to be configureable?
             if not self._vehicles:
                 vehiclesResult = await self.vcc.vehicles.get()
+                if not vehiclesResult or not vehiclesResult.data:
+                    raise UpdateFailed("No vehicles found")
                 for vehicle in vehiclesResult.data:
-                    vehicleDetails = await self.vcc.vehicles.by_vin(vehicle.vin).get()
+                    vehicleDetails = await self.vcc.vehicles.by_vin(vehicle.vin).get(
+                        request_configuration=None
+                    )
                     self._vehicles.append(vehicleDetails.data)
 
             newData: dict[str, VolvoUpdate] = {}
             for vehicle in self._vehicles:
                 # TODO Load additional data
-                fuel = await self.vcc.vehicles.by_vin(vehicle.vin).fuel.get()
-                statistics = await self.vcc.vehicles.by_vin(
-                    vehicle.vin
-                ).statistics.get()
+                fuel = await self.vcc.vehicles.by_vin(vehicle.vin).fuel.get(
+                    request_configuration=None
+                )
+                statistics = await self.vcc.vehicles.by_vin(vehicle.vin).statistics.get(
+                    request_configuration=None
+                )
                 newData[vehicle.vin] = VolvoUpdate(
                     vin=vehicle.vin,
                     model=vehicle.descriptions.model,

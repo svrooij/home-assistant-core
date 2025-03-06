@@ -7,7 +7,7 @@ from typing import Any
 
 import jwt
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlowResult
+from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.helpers import config_entry_oauth2_flow
 
 from .const import DOMAIN
@@ -48,20 +48,21 @@ class OAuth2FlowHandler(
         decoced_id_token = jwt.decode(id_token, options={"verify_signature": False})
         # Using the sub claim as the unique id, but hashing it to avoid potential privacy issues
         await self.async_set_unique_id(_hash_string_urlsafe(decoced_id_token["sub"]))
-        if self.source != SOURCE_REAUTH:
-            self._abort_if_unique_id_configured()
 
-            access_token = data["token"]["access_token"]
-            decoded_access_token = jwt.decode(
-                access_token, options={"verify_signature": False}
-            )
+        # if self.source != SOURCE_REAUTH:
+        self._abort_if_unique_id_configured()
 
-            # I think users want to see their username in the UI, so we use the username if it exists
-            # it is however recommended to threat the access token as opaque and not decode it
-            # but the username is not in the id_token (bummer)
-            return self.async_create_entry(
-                title=decoded_access_token["userName"] or decoced_id_token["sub"],
-                data=data,
-            )
+        access_token = data["token"]["access_token"]
+        decoded_access_token = jwt.decode(
+            access_token, options={"verify_signature": False}
+        )
 
-        return self.async_abort()
+        # I think users want to see their username in the UI, so we use the username if it exists
+        # it is however recommended to threat the access token as opaque and not decode it
+        # but the username is not in the id_token (bummer)
+        return self.async_create_entry(
+            title=decoded_access_token["userName"] or decoced_id_token["sub"],
+            data=data,
+        )
+
+        # return self.async_abort()
