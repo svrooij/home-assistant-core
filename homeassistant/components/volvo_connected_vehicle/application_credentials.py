@@ -5,10 +5,12 @@ from homeassistant.components.application_credentials import (
     ClientCredential,
 )
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_entry_oauth2_flow
+from homeassistant.helpers.config_entry_oauth2_flow import (
+    AbstractOAuth2Implementation,
+    LocalOAuth2ImplementationWithPkce,
+)
 
 from .const import DOMAIN, OAUTH2_AUTHORIZE, OAUTH2_TOKEN
-from .local_oauth_with_pkce import LocalOAuthWithPkce
 
 # Scopes required by the integration
 # openid is required by the OAuth2 flow
@@ -27,7 +29,7 @@ SCOPES = [
 
 async def async_get_auth_implementation(
     hass: HomeAssistant, auth_domain: str, credential: ClientCredential
-) -> config_entry_oauth2_flow.AbstractOAuth2Implementation:
+) -> AbstractOAuth2Implementation:
     """Return auth implementation."""
     return VolvoAuthImplementation(
         hass,
@@ -40,10 +42,8 @@ async def async_get_auth_implementation(
     )
 
 
-class VolvoAuthImplementation(LocalOAuthWithPkce):
-    """Application Credentials local oauth2 with PKCE implementation."""
-
-    code_verifier: str
+class VolvoAuthImplementation(LocalOAuth2ImplementationWithPkce):
+    """VolvoAuthImplementation class."""
 
     def __init__(
         self,
@@ -57,28 +57,17 @@ class VolvoAuthImplementation(LocalOAuthWithPkce):
             hass,
             auth_domain,
             credential.client_id,
-            credential.client_secret,
             authorization_server.authorize_url,
             authorization_server.token_url,
+            credential.client_secret,
+            code_verifier_length=100,
         )
-        self._name = credential.name
-        # Init PKCE
-        self.code_verifier = LocalOAuthWithPkce.generate_code_verifier()
 
     @property
     def extra_authorize_data(self) -> dict:
         """Extra data that needs to be appended to the authorize url."""
-        return {
+        data: dict = {
             "scope": " ".join(SCOPES),
-            "code_challenge_method": "S256",
-            "code_challenge": LocalOAuthWithPkce.compute_code_challenge(
-                self.code_verifier
-            ),  # PKCE
         }
-
-    @property
-    def extra_token_data(self) -> dict:
-        """Extra data that needs to be appended to the token request."""
-        return {
-            "code_verifier": self.code_verifier,
-        }
+        data.update(super().extra_authorize_data)
+        return data
